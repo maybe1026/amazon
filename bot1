@@ -1,0 +1,399 @@
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <ctime>
+#include<cmath>
+#include <vector>
+#include <algorithm>
+#include <climits>
+#include <queue>
+#include <utility>
+#include <iomanip>
+#include <cstring>
+#include <cstdio>
+
+#define GRIDSIZE 8
+#define OBSTACLE 2
+#define judge_black 0
+#define judge_white 1
+#define grid_black 1
+#define grid_white -1
+#define INF 1e6
+using namespace std;
+double k = 0;
+clock_t startTime, stopTime;
+int currBotColor; // 我所执子颜色（1为黑，-1为白，棋盘状态亦同）
+int gridInfo[GRIDSIZE][GRIDSIZE] = { 0 }; // 先x后y，记录棋盘状态
+int dx[] = { -1, -1, -1, 0, 0, 1, 1, 1 };
+int dy[] = { -1, 0, 1, -1, 1, -1, 0, 1 };
+int turnID;
+double K = 0.1;
+inline bool inMap(int x, int y) {
+	if (x < 0 || x >= GRIDSIZE || y < 0 || y >= GRIDSIZE)
+		return false;
+	return true;
+}
+bool isValid(int x, int y, int n) {
+	return x >= 0 && x < n && y >= 0 && y < n;
+}
+bool ProcStep(int x0, int y0, int x1, int y1, int x2, int y2, int color, bool check_only) {
+	if ((!inMap(x0, y0)) || (!inMap(x1, y1)) || (!inMap(x2, y2)))
+		return false;
+	if (gridInfo[x0][y0] != color || gridInfo[x1][y1] != 0)
+		return false;
+	if ((gridInfo[x2][y2] != 0) && !(x2 == x0 && y2 == y0))
+		return false;
+	if (!check_only)
+	{
+		gridInfo[x0][y0] = 0;
+		gridInfo[x1][y1] = color;
+		gridInfo[x2][y2] = OBSTACLE;
+	}
+	return true;
+}
+int steps[8][8];
+void queenMove(int board[][8], int startX, int startY) {
+	int n = 8;
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++)
+		{
+			steps[i][j] = INT_MAX;
+		}
+	}
+	int directions[8][2] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1} };
+	queue<pair<int, int>> q;
+	q.push({ startX, startY });
+	steps[startX][startY] = 0;
+	while (!q.empty()) {
+		int size = q.size();
+		for (int ii = 0; ii < size; ++ii) {
+			int x = q.front().first;
+			int y = q.front().second;
+			q.pop();
+			for (int i = 0; i < 8; i++)
+			{
+				int newX = x + directions[i][0];
+				int newY = y + directions[i][1];
+				while (isValid(newX, newY, n) && board[newX][newY] == 0) {
+					if (steps[newX][newY] > steps[x][y] + 1) {
+						steps[newX][newY] = steps[x][y] + 1;
+						q.push({ newX, newY });
+					}
+					newX += directions[i][0];
+					newY += directions[i][1];
+				}
+			}
+		}
+	}
+}
+int steps2[8][8];
+void kingMove(int board[][8], int startX, int startY) {
+	int n = 8;
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++)
+		{
+			steps2[i][j] = INT_MAX;
+		}
+	}
+	int directions[8][2] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1} };
+	queue<pair<int, int>> q;
+	q.push({ startX, startY });
+	steps2[startX][startY] = 0;
+	while (!q.empty()) {
+		int x = q.front().first;
+		int y = q.front().second;
+		q.pop();
+		for (int i = 0; i < 8; i++) {
+			int newX = x + directions[i][0];
+			int newY = y + directions[i][1];
+			if (isValid(newX, newY, n) && board[newX][newY] == 0 && steps2[newX][newY] > steps2[x][y] + 1) {
+				steps2[newX][newY] = steps2[x][y] + 1;
+				q.push({ newX, newY });
+			}
+		}
+	}
+}
+double f(int d1, int d2) {
+	if (d1 == INT_MAX && d2 == INT_MAX) {
+		return 0;
+	}
+	if (d1 == d2) {
+		return k;
+	}
+	if (d1 < d2) {
+		return 1;
+	}
+	return -1;
+}
+double  whiteqq[8][8] = { {-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1} }, f1[32] = { 0.0000, 0.1080, 0.1080, 0.1235, 0.1332, 0.1400,0.1468, 0.1565, 0.1720, 0.1949, 0.2217,0.2476, 0.2680, 0.2800, 0.2884, 0.3000,0.3208, 0.3535, 0.4000, 0.4613, 0.5350,0.6181, 0.7075, 0.8000, 1.0000, 1.0000,1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000 }
+, blackqq[8][8] = { {-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1} }, f2[32] = { 1.0000, 0.3940, 0.3940, 0.3826, 0.3753, 0.3700,0.3647, 0.3574, 0.3460, 0.3294, 0.3098,0.2903, 0.2740, 0.2631, 0.2559, 0.2500,0.2430, 0.2334, 0.2200, 0.2020, 0.1800,0.1550, 0.1280, 0.1000, 0.0000, 0.0000,0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000 }
+, whitekk[8][8] = { {-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1} }, f3[32] = { 0.0000, 0.1160, 0.1160, 0.1224, 0.1267, 0.1300,0.1333, 0.1376, 0.1440, 0.1531, 0.1640,0.1754, 0.1860, 0.1944, 0.1995, 0.2000,0.1950, 0.1849, 0.1700, 0.1510, 0.1287,0.1038, 0.0773, 0.0500, 0.0000, 0.0000,0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000 }
+, blackkk[8][8] = { {-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1} }, f4[32] = { 0.0000, 0.1160, 0.1160, 0.1224, 0.1267, 0.1300,0.1333, 0.1376, 0.1440, 0.1531, 0.1640,0.1754, 0.1860, 0.1944, 0.1995, 0.2000,0.1950, 0.1849, 0.1700, 0.1510, 0.1287,0.1038, 0.0773, 0.0500, 0.0000, 0.0000,0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000 }
+, qipann[8][8] = { {-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1} }, f5[32] = { 0.0000, 0.2300, 0.2300, 0.2159, 0.2067, 0.2000,0.1933, 0.1841, 0.1700, 0.1496, 0.1254,0.1010, 0.0800, 0.0652, 0.0557, 0.0500,0.0464, 0.0436, 0.0400, 0.0346, 0.0274,0.0190, 0.0097, 0.0000, 0.0000, 0.0000,0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000 };
+double pinggu() {
+	double h1; double h2; double p; double m;
+	int qipan[8][8] = {
+		{0, 0, 0, 2, 0, 0, 0, 0},
+		{0, 1, 0, 2, 0, -1, 0, 0},
+		{0, 0, 0, 2, 0, 0, 0, -1},
+		{0, 0, 0, 2, 0, 0, -1, 0},
+		{1, 0, 0, 2, 0, 0, 0, 0},
+		{0, 0, 0, 2, 0, 0, 0, 0},
+		{0, 1, 0, 2, 0, 2, 2, 2},
+		{0, 0, 1, 2, 0, 2, -1, 0}
+	};;
+	for (int x2 = 0; x2 < GRIDSIZE; x2++) {
+		for (int y2 = 0; y2 < GRIDSIZE; y2++) {
+			qipan[x2][y2] = gridInfo[x2][y2];
+		}
+	}
+	double mobb = 0, mobw = 0, mob = 0;
+	int mobilityInfo[GRIDSIZE][GRIDSIZE] = { 0 };
+	for (int x1 = 0; x1 < GRIDSIZE; x1++) {
+		for (int y1 = 0; y1 < GRIDSIZE; y1++) {
+			if (qipan[x1][y1] != 0) {
+				continue;
+			}
+			x1++;
+			if (x1 >= 0 && x1 <= 7 && y1 >= 0 && y1 <= 7) { mobilityInfo[x1][y1]++; }y1++;
+			if (x1 >= 0 && x1 <= 7 && y1 >= 0 && y1 <= 7) { mobilityInfo[x1][y1]++; }x1--;
+			if (x1 >= 0 && x1 <= 7 && y1 >= 0 && y1 <= 7) { mobilityInfo[x1][y1]++; }x1--;
+			if (x1 >= 0 && x1 <= 7 && y1 >= 0 && y1 <= 7) { mobilityInfo[x1][y1]++; }y1--;
+			if (x1 >= 0 && x1 <= 7 && y1 >= 0 && y1 <= 7) { mobilityInfo[x1][y1]++; }y1--;
+			if (x1 >= 0 && x1 <= 7 && y1 >= 0 && y1 <= 7) { mobilityInfo[x1][y1]++; }x1++;
+			if (x1 >= 0 && x1 <= 7 && y1 >= 0 && y1 <= 7) { mobilityInfo[x1][y1]++; }x1++;
+			if (x1 >= 0 && x1 <= 7 && y1 >= 0 && y1 <= 7) { mobilityInfo[x1][y1]++; }x1--; y1++;
+		}
+	}
+	int whiteq[8][8] = { {-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1} }
+		, whitek[8][8] = { {-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1} }
+		, blackq[8][8] = { {-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1} }
+	, blackk[8][8] = { {-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1},{-1, -1, -1, -1, -1, -1, -1, -1} };
+	for (int x2 = 0; x2 < GRIDSIZE; x2++) {
+		for (int y2 = 0; y2 < GRIDSIZE; y2++) {
+			if (qipan[x2][y2] == -1) {
+				mob = 0;
+				queenMove(qipan, x2, y2);
+				for (int x2 = 0; x2 < GRIDSIZE; x2++) {
+					for (int y2 = 0; y2 < GRIDSIZE; y2++) {
+						if (whiteq[x2][y2] == -1 || steps[x2][y2] < whiteq[x2][y2])whiteq[x2][y2] = steps[x2][y2];
+					}
+				}
+				kingMove(qipan, x2, y2);
+				for (int x2 = 0; x2 < GRIDSIZE; x2++) {
+					for (int y2 = 0; y2 < GRIDSIZE; y2++) {
+						if (steps[x2][y2] == 1) {
+							mob += mobilityInfo[x2][y2] / (steps2[x2][y2] * 1.00000);
+						}
+						if (whitek[x2][y2] == -1 || steps2[x2][y2] < whitek[x2][y2])whitek[x2][y2] = steps2[x2][y2];
+					}
+				}
+				mobw += 100.0 / (10 + mob);
+			}
+			else if (qipan[x2][y2] == 1) {
+				mob = 0;
+				queenMove(qipan, x2, y2);
+				for (int x2 = 0; x2 < GRIDSIZE; x2++) {
+					for (int y2 = 0; y2 < GRIDSIZE; y2++) {
+						if (blackq[x2][y2] == -1 || steps[x2][y2] < blackq[x2][y2]) blackq[x2][y2] = steps[x2][y2];
+					}
+				}
+				kingMove(qipan, x2, y2);
+				for (int x2 = 0; x2 < GRIDSIZE; x2++) {
+					for (int y2 = 0; y2 < GRIDSIZE; y2++) {
+						if (steps[x2][y2] == 1) {
+							mob += mobilityInfo[x2][y2] / (steps2[x2][y2] * 1.00000);
+						}
+						if (blackk[x2][y2] == -1 || steps2[x2][y2] < blackk[x2][y2])blackk[x2][y2] = steps2[x2][y2];
+					}
+				}
+				mobb += 100.0 / (10 + mob);
+			}
+		}
+	}
+	double t1 = 0, t2 = 0, p1 = 0, p2 = 0;
+	for (int x1 = 0; x1 < GRIDSIZE; x1++) {
+		for (int y1 = 0; y1 < GRIDSIZE; y1++) {
+			if (qipan[x1][y1] != 0) {
+				continue;
+			}
+			p1 += 2 * (pow(2, -blackq[x1][y1]) - pow(2, -whiteq[x1][y1]));
+			p2 += min(1.000, max(-1.0000, (whitek[x1][y1] - blackk[x1][y1]) / 6.00000));
+			t1 += f(blackq[x1][y1], whiteq[x1][y1]);
+			t2 += f(blackk[x1][y1], whitek[x1][y1]);
+		}
+	}
+	double a, b, c, e;
+	a = f1[turnID], b = f2[turnID]; c = f3[turnID] + f4[turnID]; e = f5[turnID];
+	m = mobb - mobw;
+	p = p1 + p2;
+	h1 = t1;
+	h2 = t2;
+	double re = a * h1 + b * h2 + c * p + e * m;
+	if (currBotColor == -1) { return -re; }
+	return re;
+}
+struct play
+{
+	int beginPos[2], possiblePos[2], obstaclePos[2];
+	double value;
+};
+bool cmp1(const struct play node1, const struct play node2)//从大到小排序 
+{
+	return node1.value > node2.value;
+}
+bool cmp2(const struct play node1, const struct play node2)//从小到大排序 
+{
+	return node1.value < node2.value;
+}
+struct play node[10000000];
+int nodeNumber = 0, timeOut = 0;
+int startX = 0, startY = 2, resultX = 0, resultY = 1, obstacleX = 0, obstacleY = 0;
+int startXtemp = 0, startYtemp = 2, resultXtemp = 0, resultYtemp = 1, obstacleXtemp = 0, obstacleYtemp = 0;
+void luozi(int Number, int color) {
+	if (!ProcStep(node[Number].beginPos[0], node[Number].beginPos[1], node[Number].possiblePos[0], node[Number].possiblePos[1], node[Number].obstaclePos[0], node[Number].obstaclePos[1], color, true)) exit(0);
+	gridInfo[node[Number].beginPos[0]][node[Number].beginPos[1]] = 0;
+	gridInfo[node[Number].possiblePos[0]][node[Number].possiblePos[1]] = color;
+	gridInfo[node[Number].obstaclePos[0]][node[Number].obstaclePos[1]] = OBSTACLE;
+}
+void tizi(int Number, int color) {
+	gridInfo[node[Number].obstaclePos[0]][node[Number].obstaclePos[1]] = 0;
+	gridInfo[node[Number].possiblePos[0]][node[Number].possiblePos[1]] = 0;
+	gridInfo[node[Number].beginPos[0]][node[Number].beginPos[1]] = color;
+}
+double AB(int depth, int depthTemp, int color, double a, double b) {
+	if ((double)(clock() - startTime) / CLOCKS_PER_SEC > 0.9)
+	{
+		timeOut = 1;
+		return 0;
+	}
+	if (depth == depthTemp)
+		return pinggu();
+	int numberStart = nodeNumber;
+	for (int i = 0; i < GRIDSIZE; ++i) {
+		for (int j = 0; j < GRIDSIZE; ++j) {
+			if (gridInfo[i][j] != color) continue;
+			for (int k = 0; k < 8; ++k) {
+				for (int delta1 = 1; delta1 < GRIDSIZE; delta1++) {
+					int xx = i + dx[k] * delta1;
+					int yy = j + dy[k] * delta1;
+					if (gridInfo[xx][yy] != 0 || !inMap(xx, yy))
+						break;
+					for (int l = 0; l < 8; ++l) {
+						for (int delta2 = 1; delta2 < GRIDSIZE; delta2++) {
+							int xxx = xx + dx[l] * delta2;
+							int yyy = yy + dy[l] * delta2;
+							if (!inMap(xxx, yyy))
+								break;
+							if (gridInfo[xxx][yyy] != 0 && !(i == xxx && j == yyy))
+								break;
+							if (ProcStep(i, j, xx, yy, xxx, yyy, color, true))
+							{
+								node[nodeNumber].beginPos[0] = i;
+								node[nodeNumber].beginPos[1] = j;
+								node[nodeNumber].possiblePos[0] = xx;
+								node[nodeNumber].possiblePos[1] = yy;
+								node[nodeNumber].obstaclePos[0] = xxx;
+								node[nodeNumber].obstaclePos[1] = yyy;
+								luozi(nodeNumber, color);
+								node[nodeNumber].value = pinggu();
+								tizi(nodeNumber, color);
+								nodeNumber++;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if (color == currBotColor)    //填空
+		sort(node + numberStart, node + nodeNumber, cmp1);
+	else sort(node + numberStart, node + nodeNumber, cmp2);
+	int numberEnd = nodeNumber;
+	while (numberStart < numberEnd) {
+		luozi(numberStart, color);
+		double val = AB(depth, depthTemp + 1, -color, a, b);
+		tizi(numberStart, color);
+		if (color == currBotColor)
+		{
+			if (val > a)
+			{
+				a = val;
+				if (depthTemp == 0)
+				{
+					startXtemp = node[numberStart].beginPos[0];
+					startYtemp = node[numberStart].beginPos[1];
+					resultXtemp = node[numberStart].possiblePos[0];
+					resultYtemp = node[numberStart].possiblePos[1];
+					obstacleXtemp = node[numberStart].obstaclePos[0];
+					obstacleYtemp = node[numberStart].obstaclePos[1];
+				}
+				if (val >= b)
+					return b;
+			}
+		}
+		else
+		{
+			if (val < b) {
+				b = val;
+				if (val <= a)
+					return a;
+			}
+		}
+		numberStart++;
+	}
+	if (color == currBotColor)
+		return a;
+	else return b;
+}
+int main() {
+	int x0, y0, x1, y1, x2, y2;
+	gridInfo[0][(GRIDSIZE - 1) / 3] = gridInfo[(GRIDSIZE - 1) / 3][0]
+		= gridInfo[GRIDSIZE - 1 - ((GRIDSIZE - 1) / 3)][0]
+		= gridInfo[GRIDSIZE - 1][(GRIDSIZE - 1) / 3] = grid_black;
+	gridInfo[0][GRIDSIZE - 1 - ((GRIDSIZE - 1) / 3)] = gridInfo[(GRIDSIZE - 1) / 3][GRIDSIZE - 1]
+		= gridInfo[GRIDSIZE - 1 - ((GRIDSIZE - 1) / 3)][GRIDSIZE - 1]
+		= gridInfo[GRIDSIZE - 1][GRIDSIZE - 1 - ((GRIDSIZE - 1) / 3)] = grid_white;
+	cin >> turnID;
+	// 读入到当前回合为止，自己和对手的所有行动，从而把局面恢复到当前回合
+	currBotColor = grid_white; // 先假设自己是白方
+	for (int i = 0; i < turnID; i++)
+	{
+		// 根据这些输入输出逐渐恢复状态到当前回合
+		// 首先是对手行动
+		cin >> x0 >> y0 >> x1 >> y1 >> x2 >> y2;
+		k = 0.1;
+		if (x0 == -1)
+		{
+			currBotColor = grid_black;
+			k = -0.1;
+		} // 第一回合收到坐标是-1, -1，说明我是黑方
+		else
+			ProcStep(x0, y0, x1, y1, x2, y2, -currBotColor, false); // 模拟对方落子
+																	// 然后是自己当时的行动
+																	// 对手行动总比自己行动多一个
+		if (i < turnID - 1)
+		{
+			cin >> x0 >> y0 >> x1 >> y1 >> x2 >> y2;
+			if (x0 >= 0)
+				ProcStep(x0, y0, x1, y1, x2, y2, currBotColor, false); // 模拟己方落子
+		}
+	}
+	// 做出决策
+	startTime = clock();
+	for (int depth = 1; depth <= 20; depth++)
+	{
+		nodeNumber = 0;
+		AB(depth, 0, currBotColor, -10000.0, 10000.0);
+		if (timeOut == 1) break;
+		startX = startXtemp;
+		startY = startYtemp;
+		resultX = resultXtemp;
+		resultY = resultYtemp;
+		obstacleX = obstacleXtemp;
+		obstacleY = obstacleYtemp;
+	}
+	// 决策结束，输出结果
+	cout << startX << ' ' << startY << ' ' << resultX << ' ' << resultY << ' ' << obstacleX << ' ' << obstacleY << endl;
+	return 0;
+}
